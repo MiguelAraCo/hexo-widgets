@@ -1,0 +1,35 @@
+{
+  "name": "hexo-widgets",
+  "version": "1.0.0-alpha.1",
+  "description": "Hexo plugin that lets you use custom widgets while writing content",
+  "main": "index.js",
+  "contributors": [
+    {
+      "name": "Miguel Aragón",
+      "email": "miguel@araco.mx"
+    },
+    {
+      "name": "Jimena Gúzman",
+      "email": "jimena.guzman@base22.com"
+    }
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MiguelAraCo/hexo-widgets.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/MiguelAraCo/hexo-widgets/issues"
+  },
+  "homepage": "https://github.com/MiguelAraCo/hexo-widgets#readme",
+  "dependencies": {
+    "deasync": "^0.1.9",
+    "ejs": "^2.5.5",
+    "glob": "^7.1.1",
+    "jsdom": "^9.10.0",
+    "path": "^0.12.7"
+  }
+}

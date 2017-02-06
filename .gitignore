@@ -1,0 +1,10 @@
+# Common files
+.DS_Store
+Thumbs.db
+*.log
+
+# Jetbrains IDEs
+.idea/
+
+# npm
+node_modules/
