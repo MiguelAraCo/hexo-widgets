@@ -1,6 +1,6 @@
 {
   "name": "hexo-widgets",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.2",
   "description": "Hexo plugin that lets you use custom widgets while writing content",
   "main": "index.js",
   "contributors": [
