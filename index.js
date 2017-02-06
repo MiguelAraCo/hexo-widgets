@@ -60,7 +60,7 @@ function processDOM( window ) {
 
 			let data = {};
 
-			let widgetPromise = preRender( element, widget, data, document, _ ).then( () => {
+			let widgetPromise = preRender( widget, data, element, document, _ ).then( () => {
 				if( "template" in widget || "templateURL" in widget ) return renderWidgetWithTemplate( widget, data, element, document, _ );
 				else if( "render" in widget ) return renderWidget( widget, data, element, document, _ );
 				else return Promise.resolve();
