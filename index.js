@@ -7,7 +7,7 @@ const glob = require( "glob" );
 const path = require( "path" );
 const fs = require( "fs" );
 
-hexo.extend.helper.register( "render_widgets", ( html, sidebarEnabled ) => {
+hexo.extend.helper.register( "render_widgets", ( html, page ) => {
 	let result = {
 		html: "",
 		error: null
@@ -21,7 +21,7 @@ hexo.extend.helper.register( "render_widgets", ( html, sidebarEnabled ) => {
 				return;
 			}
 
-			processDOM( window, sidebarEnabled ).then( () => {
+			processDOM( window, page ).then( () => {
 				result.html = window.document.querySelector( "html" ).outerHTML;
 			} ).catch( ( error ) => {
 				result.error = error;
@@ -36,7 +36,7 @@ hexo.extend.helper.register( "render_widgets", ( html, sidebarEnabled ) => {
 	return "<!DOCTYPE html>" + result.html;
 } );
 
-function processDOM( window ) {
+function processDOM( window, page ) {
 	const document = window.document;
 	const $ = document.querySelector.bind( document );
 	const $$ = document.querySelectorAll.bind( document );
@@ -46,7 +46,7 @@ function processDOM( window ) {
 		$$: $$
 	};
 
-	let widgets = glob.sync( hexo.theme.base + "widgets/*.js" ).map( ( file ) => {
+	let widgets = glob.sync( hexo.theme.base + "widgets/*.widget.js" ).map( ( file ) => {
 		return require( path.resolve( file ) );
 	} );
 
@@ -60,16 +60,16 @@ function processDOM( window ) {
 
 			let data = {};
 
-			let widgetPromise = preRender( widget, data, element, document, _ ).then( () => {
-				if( "template" in widget || "templateURL" in widget ) return renderWidgetWithTemplate( widget, data, element, document, _ );
-				else if( "render" in widget ) return renderWidget( widget, data, element, document, _ );
+			let widgetPromise = preRender( widget, data, element, page, document, _ ).then( () => {
+				if( "template" in widget || "templateURL" in widget ) return renderWidgetWithTemplate( widget, data, element, page, document, _ );
+				else if( "render" in widget ) return renderWidget( widget, data, element, page, document, _ );
 				else return Promise.resolve();
 			} );
 
 			widgetPromises.push( widgetPromise );
 		}
 
-		if( elements.length > 0 ) widgetPromises.push( addWidgetAssets( widget, document, _ ) );
+		if( elements.length > 0 ) widgetPromises.push( addWidgetAssets( widget, page, document, _ ) );
 	}
 
 	removeAssetPlaceholders( document, _ );
@@ -77,11 +77,11 @@ function processDOM( window ) {
 	return Promise.all( widgetPromises );
 }
 
-function preRender( widget, data, element, document, _ ) {
-	return "preRender" in widget ? widget.preRender( widget, data, element, document, _ ) : Promise.resolve();
+function preRender( widget, data, element, page, document, _ ) {
+	return "preRender" in widget ? widget.preRender( widget, data, element, page, document, _ ) : Promise.resolve();
 }
 
-function renderWidgetWithTemplate( widget, data, element, document, _ ) {
+function renderWidgetWithTemplate( widget, data, element, page, document, _ ) {
 	// TODO: Use readFile instead of readFileSync
 	// TODO: Reject the promise if there is no template or templateURL defined
 	// TODO: Allow templateURL outside of the base (or even local to the widget file)
@@ -92,31 +92,31 @@ function renderWidgetWithTemplate( widget, data, element, document, _ ) {
 	return Promise.resolve();
 }
 
-function renderWidget( widget, data, element, document, _ ) {
-	return widget.render( widget, data, element, document, _ );
+function renderWidget( widget, data, element, page, document, _ ) {
+	return widget.render( widget, data, element, page, document, _ );
 }
 
-function addWidgetAssets( widget, document, _ ) {
+function addWidgetAssets( widget, page, document, _ ) {
 	let promises = [];
 
-	if( "styles" in widget ) promises.push( addWidgetStyles( widget, document, _ ) );
-	if( "scripts" in widget ) promises.push( addWidgetScripts( widget, document, _ ) );
+	if( "styles" in widget && widget.styles.length !== 0 ) promises.push( addWidgetStyles( widget, page, document, _ ) );
+	if( "scripts" in widget && widget.scripts.length !== 0 ) promises.push( addWidgetScripts( widget, page, document, _ ) );
 
 	return Promise.all( promises );
 }
 
-function addWidgetStyles( widget, document, _ ) {
+function addWidgetStyles( widget, page, document, _ ) {
 	let styles = widget.styles;
 
 	let promises = [];
 	for( let style of styles ) {
-		promises.push( addWidgetStyle( style, widget, document, _ ) );
+		promises.push( addWidgetStyle( style, widget, page, document, _ ) );
 	}
 
 	return Promise.all( promises );
 }
 
-function addWidgetStyle( style, widget, document, _ ) {
+function addWidgetStyle( style, widget, page, document, _ ) {
 	if( ( "inline" in style && style.inline ) || "source" in style ) {
 		let styleSource = "";
 
@@ -136,9 +136,37 @@ function addWidgetStyle( style, widget, document, _ ) {
 	}
 }
 
-function addWidgetScripts( widget, document, _ ) {
-	// TODO
-	return Promise.resolve();
+function addWidgetScripts( widget, page, document, _ ) {
+	return Promise.resolve().then( () => {
+		let promises = [];
+		for( let script of widget.scripts ) {
+			promises.push( addWidgetScript( script, widget, page, document, _ ) );
+		}
+		return Promise.all( promises );
+	});
+}
+
+function addWidgetScript( script, widget, page, document, _ ) {
+	return Promise.resolve().then(() => {
+		if( ( "inline" in script && script.inline ) || "source" in script || "sourceURL" in script ) {
+			let source = "";
+			if( "source" in script ) {
+				source = script.source;
+			} else if( "sourceURL" in script ) {
+				source = fs.readFileSync( script.sourceURL ).toString();
+			}
+
+			source = `(function( window ){ ${source} })( window );`;
+
+			let scriptElement = document.createElement( "script" );
+			scriptElement.innerHTML = source;
+
+			let $widgetsScripts = _.$( "#widgets-scripts" );
+			$widgetsScripts.parentNode.insertBefore( scriptElement, $widgetsScripts );
+		} else {
+			// TODO
+		}
+	});
 }
 
 function removeAssetPlaceholders( document, _ ) {
